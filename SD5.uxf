@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<diagram program="umlet" version="15.1">
+  <zoom_level>10</zoom_level>
+  <element>
+    <id>UMLSequenceAllInOne</id>
+    <coordinates>
+      <x>10</x>
+      <y>10</y>
+      <w>3270</w>
+      <h>1653</h>
+    </coordinates>
+    <panel_attributes>title=
+fontsize=12
+obj=User~user ACTOR | GUI~gui | AgentController~ctrl | SubscriptionService~subs | DatabaseManager~db | ClaudeClient~claude
+
+user-&gt;&gt;&gt;gui : opens the Subscriptions tab
+gui-&gt;&gt;&gt;ctrl : getSubscriptions(); on=ctrl
+ctrl-&gt;&gt;&gt;subs : detectSubscriptions(); on=subs
+subs-&gt;&gt;&gt;db : find(transactions); on=db
+db.&gt;subs : transactions; off=db
+combinedFragment=alt~cf1 ctrl claude
+ctrl:[no transaction history]
+subs.&gt;ctrl : ask the user to import a CSV (UC01)
+..=cf1
+ctrl:[only one month of history]
+subs.&gt;ctrl : notify: more history needed
+..=cf1
+ctrl:[enough history]
+subs-&gt;&gt;&gt;subs + : normalizeMerchant(description); on=subs
+off=subs
+subs-&gt;&gt;&gt;subs + : group by merchant, check amounts and intervals; on=subs
+off=subs
+subs-&gt;&gt;&gt;subs + : classifyServiceType(subscription); on=subs
+combinedFragment=opt~cf2 subs claude
+subs:[type not in the lookup table]
+subs-&gt;&gt;&gt;claude : generate(prompt); on=claude
+claude.&gt;subs : service type; off=claude
+--=cf2
+off=subs
+subs-&gt;&gt;&gt;db : save(subscriptions); on=db
+off=db
+--=cf1
+subs.&gt;ctrl : List of Subscription; off=subs
+ctrl.&gt;gui : List of Subscription; off=ctrl
+gui-&gt;&gt;&gt;ctrl : getOverlapMessage(); on=ctrl
+ctrl-&gt;&gt;&gt;subs : findOverlaps(); on=subs
+combinedFragment=alt~cf3 ctrl claude
+ctrl:[overlap found and the agent answers]
+subs-&gt;&gt;&gt;claude : generate(prompt); on=claude
+claude.&gt;subs : overlap message; off=claude
+..=cf3
+ctrl:[no overlap or agent unavailable]
+subs.&gt;ctrl : no message
+--=cf3
+subs.&gt;ctrl : List of OverlapGroup; off=subs
+ctrl.&gt;gui : overlap message; off=ctrl
+user-&gt;&gt;&gt;gui : confirms, renames or marks a subscription
+gui-&gt;&gt;&gt;ctrl : confirmSubscription(id); on=ctrl
+ctrl-&gt;&gt;&gt;subs : confirm(id)  (or rename / markNotSubscription); on=subs
+subs-&gt;&gt;&gt;db : save(subscription); on=db
+off=db
+off=subs
+off=ctrl
+</panel_attributes>
+    <additional_attributes/>
+  </element>
+</diagram>

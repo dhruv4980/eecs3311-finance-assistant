@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<diagram program="umlet" version="15.1">
+  <zoom_level>7</zoom_level>
+  <element>
+    <id>UMLSequenceAllInOne</id>
+    <coordinates>
+      <x>273</x>
+      <y>70</y>
+      <w>1841</w>
+      <h>952</h>
+    </coordinates>
+    <panel_attributes>title=
+fontsize=12
+obj=User~user ACTOR | GUI~gui | AgentController~ctrl | CategorizationService~cat | ClaudeClient~claude | DatabaseManager~db
+
+ctrl-&gt;&gt;&gt;cat : categorize(transactions)  (called from SD01); on=cat
+combinedFragment=loop~cf1 cat cat
+cat:[for each transaction]
+cat-&gt;&gt;&gt;cat + : applyRules(t); on=cat
+off=cat
+--=cf1
+combinedFragment=opt~cf2 cat claude
+cat:[some transactions are unmatched]
+cat-&gt;&gt;&gt;cat + : askClaude(unmatched); on=cat
+combinedFragment=alt~cf3 cat claude
+cat:[the agent answers]
+cat-&gt;&gt;&gt;claude : generate(prompt); on=claude
+claude.&gt;cat : categories; off=claude
+cat-&gt;&gt;&gt;cat + : parse the response; on=cat
+off=cat
+..=cf3
+cat:[the agent times out or is unavailable]
+cat-&gt;&gt;&gt;cat + : leave as "Uncategorized"; on=cat
+off=cat
+..=cf3
+cat:[reply is unreadable or names an unknown category]
+cat-&gt;&gt;&gt;cat + : leave as "Uncategorized"; on=cat
+off=cat
+--=cf3
+off=cat
+--=cf2
+cat-&gt;&gt;&gt;db : save(categories); on=db
+off=db
+off=cat
+user-&gt;&gt;&gt;gui : opens the transaction list to review
+gui-&gt;&gt;&gt;ctrl : getCategorySummaries(month); on=ctrl
+ctrl-&gt;&gt;&gt;cat : getCategorySummaries(month); on=cat
+cat-&gt;&gt;&gt;db : find(transactions of the month); on=db
+db.&gt;cat : transactions; off=db
+cat.&gt;ctrl : List; off=cat
+ctrl.&gt;gui : category totals and percentages; off=ctrl
+gui-&gt;&gt;&gt;gui + : refresh()  user reviews the categories; on=gui
+off=gui
+user-&gt;&gt;&gt;gui : sees a wrong category and fixes it with F03  (see SD03)
+</panel_attributes>
+    <additional_attributes/>
+  </element>
+</diagram>

@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<diagram program="umlet" version="15.1">
+  <zoom_level>8</zoom_level>
+  <element>
+    <id>UMLSequenceAllInOne</id>
+    <coordinates>
+      <x>96</x>
+      <y>0</y>
+      <w>2808</w>
+      <h>984</h>
+    </coordinates>
+    <panel_attributes>title=
+fontsize=12
+obj=User~user ACTOR | GUI~gui | AgentController~ctrl | ImportService~imp | ParserFactory~factory | TDParser~parser | DatabaseManager~db | CategorizationService~cat | BudgetService~budget
+
+user-&gt;&gt;&gt;gui : chooses bank, account type and CSV file
+gui-&gt;&gt;&gt;ctrl : previewImport(file, bank, accountType); on=ctrl
+ctrl-&gt;&gt;&gt;imp : previewImport(file, bank, accountType); on=imp
+imp-&gt;&gt;&gt;factory : createParser(bank); on=factory
+factory.&gt;imp : TDParser (CIBCParser for CIBC); off=factory
+combinedFragment=alt~cf1 ctrl parser
+ctrl:[file is not a CSV or is empty]
+imp.&gt;ctrl : error: prompt for a CSV / file is empty
+..=cf1
+ctrl:[file is valid]
+imp-&gt;&gt;&gt;parser : parse(file); on=parser
+parser.&gt;imp : List of Transaction; off=parser
+imp-&gt;&gt;&gt;imp + : validateRow(row); on=imp
+off=imp
+imp-&gt;&gt;&gt;imp + : findDuplicates(rows); on=imp
+off=imp
+--=cf1
+imp.&gt;ctrl : ImportResult; off=imp
+ctrl.&gt;gui : ImportResult (preview); off=ctrl
+gui-&gt;&gt;&gt;gui + : refresh()  shows the preview; on=gui
+off=gui
+user-&gt;&gt;&gt;gui : clicks Confirm
+gui-&gt;&gt;&gt;ctrl : confirmImport(result); on=ctrl
+ctrl-&gt;&gt;&gt;imp : confirmImport(result); on=imp
+imp-&gt;&gt;&gt;db : save(transactions); on=db
+off=db
+imp.&gt;ctrl : ImportResult; off=imp
+ctrl-&gt;&gt;&gt;cat : categorize(transactions)  (see SD02); on=cat
+off=cat
+ctrl-&gt;&gt;&gt;budget : checkThresholds(month)  (see SD04); on=budget
+off=budget
+ctrl.&gt;gui : ImportResult (summary); off=ctrl
+gui-&gt;&gt;&gt;gui + : refresh()  shows the import summary; on=gui
+off=gui
+</panel_attributes>
+    <additional_attributes/>
+  </element>
+</diagram>

@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<diagram program="umlet" version="15.1">
+  <zoom_level>7</zoom_level>
+  <element>
+    <id>UMLSequenceAllInOne</id>
+    <coordinates>
+      <x>0</x>
+      <y>0</y>
+      <w>2912</w>
+      <h>882</h>
+    </coordinates>
+    <panel_attributes>title=
+fontsize=12
+obj=User~user ACTOR | GUI~gui | AgentController~ctrl | ReportService~report | BudgetService~budget | SubscriptionService~subs | ClaudeClient~claude | DatabaseManager~db
+
+user-&gt;&gt;&gt;gui : selects a month, clicks Generate
+gui-&gt;&gt;&gt;ctrl : generateMonthlyReport(month); on=ctrl
+ctrl-&gt;&gt;&gt;report : generate(month); on=report
+report-&gt;&gt;&gt;db : find(transactions of the month); on=db
+db.&gt;report : transactions; off=db
+combinedFragment=alt~cf1 ctrl db
+ctrl:[no transactions in the month]
+report.&gt;ctrl : warning: no transactions
+..=cf1
+ctrl:[transactions exist]
+report-&gt;&gt;&gt;report + : calculate totals and category breakdown; on=report
+off=report
+report-&gt;&gt;&gt;budget : getStatus(month); on=budget
+budget.&gt;report : budget status; off=budget
+report-&gt;&gt;&gt;report + : findUnusualTransactions(month); on=report
+off=report
+report-&gt;&gt;&gt;subs : detectSubscriptions(); on=subs
+subs.&gt;report : subscription changes; off=subs
+report-&gt;&gt;&gt;report + : writeSummary(facts); on=report
+combinedFragment=alt~cf2 report claude
+report:[the agent answers]
+report-&gt;&gt;&gt;claude : generate(prompt); on=claude
+claude.&gt;report : summary; off=claude
+..=cf2
+report:[the agent is unavailable]
+report-&gt;&gt;&gt;report + : templateSummary(facts); on=report
+off=report
+--=cf2
+off=report
+report-&gt;&gt;&gt;db : save(report); on=db
+off=db
+--=cf1
+report.&gt;ctrl : MonthlyReport; off=report
+ctrl.&gt;gui : MonthlyReport; off=ctrl
+gui-&gt;&gt;&gt;gui + : refresh()  shows the report; on=gui
+off=gui
+</panel_attributes>
+    <additional_attributes/>
+  </element>
+</diagram>

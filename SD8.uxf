@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<diagram program="umlet" version="15.1">
+  <zoom_level>10</zoom_level>
+  <element>
+    <id>UMLSequenceAllInOne</id>
+    <coordinates>
+      <x>10</x>
+      <y>10</y>
+      <w>2280</w>
+      <h>1035</h>
+    </coordinates>
+    <panel_attributes>title=
+fontsize=12
+obj=User~user ACTOR | GUI~gui | AgentController~ctrl | GoalService~goalsvc | Goal~goal | InProgressState~inprog | CompletedState~completed | ClaudeClient~claude | DatabaseManager~db
+
+user-&gt;&gt;&gt;gui : opens the goal to see its status
+gui-&gt;&gt;&gt;ctrl : getGoalStatus(goalId); on=ctrl
+ctrl-&gt;&gt;&gt;goalsvc : getStatus(goalId); on=goalsvc
+goalsvc-&gt;&gt;&gt;db : find(goalId); on=db
+db.&gt;goalsvc : Goal; off=db
+goalsvc-&gt;&gt;&gt;goal : getMessage(); on=goal
+combinedFragment=alt~cf1 goal claude
+goal:[state is InProgressState]
+goal-&gt;&gt;&gt;inprog : getMessage(goal); on=inprog
+combinedFragment=opt~cf2 inprog claude
+inprog:[the goal is behind]
+inprog-&gt;&gt;&gt;claude : generate(prompt); on=claude
+claude.&gt;inprog : tips to catch up; off=claude
+--=cf2
+inprog.&gt;goal : message; off=inprog
+..=cf1
+goal:[state is CompletedState]
+goal-&gt;&gt;&gt;completed : getMessage(goal); on=completed
+completed.&gt;goal : "goal reached"; off=completed
+--=cf1
+goal.&gt;goalsvc : message; off=goal
+goalsvc.&gt;ctrl : status; off=goalsvc
+ctrl.&gt;gui : status (progress, required monthly amount, message); off=ctrl
+gui-&gt;&gt;&gt;gui + : refresh()  shows the status; on=gui
+off=gui
+</panel_attributes>
+    <additional_attributes/>
+  </element>
+</diagram>

@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<diagram program="umlet" version="15.1">
+  <zoom_level>6</zoom_level>
+  <element>
+    <id>UMLSequenceAllInOne</id>
+    <coordinates>
+      <x>234</x>
+      <y>54</y>
+      <w>1860</w>
+      <h>822</h>
+    </coordinates>
+    <panel_attributes>title=
+fontsize=12
+obj=User~user ACTOR | GUI~gui | AgentController~ctrl | FinanceAgent~agent | ClaudeClient~claude | SpendingTool~tool | DatabaseManager~db
+
+user-&gt;&gt;&gt;gui : types a question
+gui-&gt;&gt;&gt;ctrl : askQuestion(text); on=ctrl
+ctrl-&gt;&gt;&gt;agent : run(question); on=agent
+agent-&gt;&gt;&gt;agent + : memory.add(question); on=agent
+off=agent
+combinedFragment=alt~cf1 ctrl db
+ctrl:[the agent is available]
+combinedFragment=loop~cf2 agent db
+agent:[until Claude gives an answer or stepLimitReached()]
+agent-&gt;&gt;&gt;claude : generate(prompt); on=claude
+claude.&gt;agent : tool call or final answer; off=claude
+combinedFragment=alt~cf3 agent db
+agent:[Claude chose a tool]
+agent-&gt;&gt;&gt;agent + : executeTool(name, args); on=agent
+agent-&gt;&gt;&gt;tool : execute(args); on=tool
+tool-&gt;&gt;&gt;db : find(transactions); on=db
+db.&gt;tool : data; off=db
+tool.&gt;agent : result; off=tool
+off=agent
+..=cf3
+agent:[Claude wrote the answer]
+agent-&gt;&gt;&gt;agent + : exit the loop; on=agent
+off=agent
+--=cf3
+--=cf2
+combinedFragment=opt~cf4 agent db
+agent:[stepLimitReached()]
+agent-&gt;&gt;&gt;agent + : stop the loop, answer "could not finish"; on=agent
+off=agent
+--=cf4
+agent-&gt;&gt;&gt;agent + : memory.add(answer); on=agent
+off=agent
+..=cf1
+ctrl:[the agent times out]
+agent.&gt;ctrl : show "Agent is down"
+--=cf1
+agent.&gt;ctrl : answer; off=agent
+ctrl.&gt;gui : answer; off=ctrl
+gui-&gt;&gt;&gt;gui + : refresh()  shows the answer; on=gui
+off=gui
+</panel_attributes>
+    <additional_attributes/>
+  </element>
+</diagram>

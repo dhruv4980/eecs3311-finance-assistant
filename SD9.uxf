@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<diagram program="umlet" version="15.1">
+  <zoom_level>10</zoom_level>
+  <element>
+    <id>UMLSequenceAllInOne</id>
+    <coordinates>
+      <x>10</x>
+      <y>10</y>
+      <w>1735</w>
+      <h>1103</h>
+    </coordinates>
+    <panel_attributes>title=
+fontsize=12
+obj=User~user ACTOR | GUI~gui | AgentController~ctrl | ReportService~report
+
+user-&gt;&gt;&gt;gui : chooses type, month, format and path, clicks Save
+gui-&gt;&gt;&gt;ctrl : exportReport(type, month, format, path); on=ctrl
+ctrl-&gt;&gt;&gt;report : export(type, month, format, path); on=report
+report-&gt;&gt;&gt;report + : generate(month)  collect the report data; on=report
+off=report
+combinedFragment=alt~cf1 ctrl report
+ctrl:[path is invalid]
+report.&gt;ctrl : error: ask for a new path
+..=cf1
+ctrl:[a file already exists there]
+report.&gt;ctrl : prompt: overwrite?
+..=cf1
+ctrl:[otherwise]
+combinedFragment=alt~cf2 report report
+report:[format is PDF]
+report-&gt;&gt;&gt;report + : writePdf(report, path); on=report
+off=report
+..=cf2
+report:[format is CSV]
+report-&gt;&gt;&gt;report + : writeCsv(report, path); on=report
+off=report
+..=cf2
+report:[format is Markdown]
+report-&gt;&gt;&gt;report + : writeMarkdown(report, path); on=report
+off=report
+--=cf2
+--=cf1
+report.&gt;ctrl : file location; off=report
+ctrl.&gt;gui : file location; off=ctrl
+gui-&gt;&gt;&gt;gui + : refresh()  shows the file location; on=gui
+off=gui
+</panel_attributes>
+    <additional_attributes/>
+  </element>
+</diagram>

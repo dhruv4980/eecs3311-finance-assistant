@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<diagram program="umlet" version="15.1">
+  <zoom_level>10</zoom_level>
+  <element>
+    <id>UMLSequenceAllInOne</id>
+    <coordinates>
+      <x>10</x>
+      <y>10</y>
+      <w>3324</w>
+      <h>1353</h>
+    </coordinates>
+    <panel_attributes>title=
+fontsize=12
+obj=User~user ACTOR | GUI~gui | AgentController~ctrl | GoalService~goalsvc | Goal~goal | InProgressState~inprog | DatabaseManager~db
+
+user-&gt;&gt;&gt;gui : enters goal name, target and deadline
+gui-&gt;&gt;&gt;ctrl : createGoal(name, target, deadline); on=ctrl
+ctrl-&gt;&gt;&gt;goalsvc : createGoal(name, target, deadline); on=goalsvc
+combinedFragment=alt~cf1 ctrl db
+ctrl:[target is 0 or less]
+goalsvc.&gt;ctrl : error: flag the target
+..=cf1
+ctrl:[valid goal]
+goalsvc-&gt;&gt;&gt;db : save(goal); on=db
+off=db
+--=cf1
+goalsvc.&gt;ctrl : Goal; off=goalsvc
+ctrl.&gt;gui : Goal; off=ctrl
+user-&gt;&gt;&gt;gui : clicks Contribute
+gui-&gt;&gt;&gt;ctrl : addContribution(goalId, amount); on=ctrl
+ctrl-&gt;&gt;&gt;goalsvc : addContribution(goalId, amount); on=goalsvc
+goalsvc-&gt;&gt;&gt;db : find(goalId); on=db
+db.&gt;goalsvc : Goal; off=db
+goalsvc-&gt;&gt;&gt;goal : addContribution(amount); on=goal
+goal-&gt;&gt;&gt;inprog : addContribution(goal, amount); on=inprog
+inprog.&gt;goal : done; off=inprog
+goal-&gt;&gt;&gt;goal + : updateState(); on=goal
+combinedFragment=alt~cf2 goal goal
+goal:[contributed reaches the target]
+goal-&gt;&gt;&gt;goal + : setState(CompletedState); on=goal
+off=goal
+..=cf2
+goal:[still in progress]
+goal-&gt;&gt;&gt;goal + : keep InProgressState; on=goal
+off=goal
+--=cf2
+off=goal
+off=goal
+goalsvc-&gt;&gt;&gt;db : save(goal); on=db
+off=db
+goalsvc.&gt;ctrl : done; off=goalsvc
+ctrl.&gt;gui : updated goal; off=ctrl
+gui-&gt;&gt;&gt;gui + : refresh()  shows the progress; on=gui
+off=gui
+</panel_attributes>
+    <additional_attributes/>
+  </element>
+</diagram>

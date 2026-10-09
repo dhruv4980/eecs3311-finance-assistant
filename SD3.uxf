@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<diagram program="umlet" version="15.1">
+  <zoom_level>7</zoom_level>
+  <element>
+    <id>UMLSequenceAllInOne</id>
+    <coordinates>
+      <x>203</x>
+      <y>91</y>
+      <w>1589</w>
+      <h>840</h>
+    </coordinates>
+    <panel_attributes>title=
+fontsize=12
+obj=User~user ACTOR | GUI~gui | AgentController~ctrl | CategorizationService~cat | DatabaseManager~db | BudgetService~budget
+
+user-&gt;&gt;&gt;gui : selects a row, chooses "Edit Category"
+user-&gt;&gt;&gt;gui : picks a category (and optionally "Apply to similar")
+combinedFragment=alt~cf1 gui budget
+gui:[user cancels mid-edit]
+gui-&gt;&gt;&gt;gui + : discard edit  (no changes saved); on=gui
+off=gui
+..=cf1
+gui:[user confirms]
+gui-&gt;&gt;&gt;ctrl : recategorize(txnId, category, applyToSimilar); on=ctrl
+ctrl-&gt;&gt;&gt;cat : recategorize(txnId, category, applyToSimilar); on=cat
+cat-&gt;&gt;&gt;db : save(transaction); on=db
+off=db
+combinedFragment=opt~cf2 ctrl db
+ctrl:[applyToSimilar is true]
+cat-&gt;&gt;&gt;cat + : saveRule(pattern, category, replace); on=cat
+combinedFragment=alt~cf3 ctrl db
+ctrl:[rule conflicts with an existing rule]
+cat.&gt;ctrl : conflict: replace or keep both?
+..=cf3
+ctrl:[no conflict]
+cat-&gt;&gt;&gt;db : save(CategoryRule); on=db
+off=db
+cat-&gt;&gt;&gt;db : save(similar transactions); on=db
+off=db
+--=cf3
+off=cat
+--=cf2
+off=cat
+ctrl-&gt;&gt;&gt;budget : checkThresholds(month); on=budget
+off=budget
+ctrl.&gt;gui : updated; off=ctrl
+gui-&gt;&gt;&gt;gui + : refresh(); on=gui
+off=gui
+--=cf1
+</panel_attributes>
+    <additional_attributes/>
+  </element>
+</diagram>

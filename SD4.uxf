@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<diagram program="umlet" version="15.1">
+  <zoom_level>7</zoom_level>
+  <element>
+    <id>UMLSequenceAllInOne</id>
+    <coordinates>
+      <x>28</x>
+      <y>35</y>
+      <w>2303</w>
+      <h>987</h>
+    </coordinates>
+    <panel_attributes>title=
+fontsize=12
+obj=User~user ACTOR | GUI~gui | AgentController~ctrl | BudgetService~budget | DatabaseManager~db | GuiAlertPanel~panel | CliAlertPrinter~cliprn
+
+gui-&gt;&gt;&gt;budget : attach(guiAlertPanel)  at start-up (the CLI attaches CliAlertPrinter the same way)
+user-&gt;&gt;&gt;gui : enters month, category and amount
+gui-&gt;&gt;&gt;ctrl : setBudget(month, category, amount, overwrite); on=ctrl
+ctrl-&gt;&gt;&gt;budget : setBudget(month, category, amount, overwrite); on=budget
+budget-&gt;&gt;&gt;budget + : budgetExists(month, category); on=budget
+off=budget
+combinedFragment=alt~cf1 ctrl db
+ctrl:[amount is zero or negative]
+budget.&gt;ctrl : error: reject, prompt again
+..=cf1
+ctrl:[budget exists and overwrite is false]
+budget.&gt;ctrl : ask: overwrite or cancel
+..=cf1
+ctrl:[otherwise]
+budget-&gt;&gt;&gt;db : save(budget); on=db
+off=db
+--=cf1
+budget.&gt;ctrl : Budget; off=budget
+ctrl-&gt;&gt;&gt;budget : checkThresholds(month); on=budget
+budget-&gt;&gt;&gt;db : find(transactions of the month); on=db
+db.&gt;budget : transactions; off=db
+budget-&gt;&gt;&gt;budget + : getStatus(month); on=budget
+off=budget
+combinedFragment=alt~cf2 ctrl cliprn
+ctrl:[no budget set for the category]
+budget.&gt;ctrl : show "no budget set"
+..=cf2
+ctrl:[threshold crossed for the first time this month]
+budget-&gt;&gt;&gt;budget + : notifyObservers(message); on=budget
+combinedFragment=loop~cf3 budget cliprn
+budget:[for each attached observer]
+budget-&gt;&gt;&gt;panel : onAlert(message)
+budget-&gt;&gt;&gt;cliprn : onAlert(message)
+--=cf3
+off=budget
+--=cf2
+off=budget
+ctrl.&gt;gui : Budget; off=ctrl
+gui-&gt;&gt;&gt;gui + : refresh(); on=gui
+off=gui
+gui-&gt;&gt;&gt;budget : detach(guiAlertPanel)  at shut-down
+</panel_attributes>
+    <additional_attributes/>
+  </element>
+</diagram>
