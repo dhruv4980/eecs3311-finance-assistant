@@ -1,0 +1,1 @@
+Not a CSV - used to demo the invalid file type error.
