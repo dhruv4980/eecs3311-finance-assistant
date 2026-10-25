@@ -1,0 +1,20 @@
+# Local secrets - never commit real API keys
+.env
+.env.*
+!.env.example
+config.local.json
+
+# Local data written by the app
+data/
+*.db.json
+
+# Build output
+target/
+out/
+*.class
+
+# IDE
+.idea/
+*.iml
+.vscode/
+.DS_Store
