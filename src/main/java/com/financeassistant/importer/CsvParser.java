@@ -21,7 +21,7 @@ public abstract class CsvParser implements StatementParser {
     @Override
     public ParseResult parse(File file) throws ImportException {
         List<String> lines = readRows(file);
-        List<Transaction> transactions = new ArrayList<>();
+        List<ParseResult.ParsedRow> parsed = new ArrayList<>();
         List<RejectedRow> rejected = new ArrayList<>();
         for (int i = 0; i < lines.size(); i++) {
             String line = lines.get(i);
@@ -33,12 +33,12 @@ public abstract class CsvParser implements StatementParser {
                 continue;
             }
             try {
-                transactions.add(toTransaction(row));
+                parsed.add(new ParseResult.ParsedRow(i + 1, line, toTransaction(row)));
             } catch (IllegalArgumentException | DateTimeParseException e) {
                 rejected.add(new RejectedRow(i + 1, line, e.getMessage()));
             }
         }
-        return new ParseResult(transactions, rejected);
+        return new ParseResult(parsed, rejected);
     }
 
     protected List<String> readRows(File file) throws ImportException {

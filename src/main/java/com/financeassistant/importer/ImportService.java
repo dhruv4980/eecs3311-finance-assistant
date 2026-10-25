@@ -39,24 +39,24 @@ public class ImportService {
             throw new ImportException(e.getMessage(), e);
         }
         ParseResult parsed = parser.parse(file);
-        if (parsed.transactions().isEmpty() && parsed.rejected().isEmpty()) {
+        if (parsed.rows().isEmpty() && parsed.rejected().isEmpty()) {
             throw new ImportException("The file " + file.getName() + " has no transactions in it.");
         }
 
         int accountId = findAccount(parser.getBankName(), accountType).map(Account::getId).orElse(0);
         List<RejectedRow> rejected = new ArrayList<>(parsed.rejected());
         List<Transaction> candidates = new ArrayList<>();
-        int rowNumber = 0;
-        for (Transaction t : parsed.transactions()) {
-            rowNumber++;
+        for (ParseResult.ParsedRow row : parsed.rows()) {
+            Transaction t = row.transaction();
             t.setAccountId(accountId);
             String problem = validateRow(t);
             if (problem == null) {
                 candidates.add(t);
             } else {
-                rejected.add(new RejectedRow(rowNumber, t.getDate() + "," + t.getDescription() + "," + t.getAmount(), problem));
+                rejected.add(new RejectedRow(row.lineNumber(), row.rawLine(), problem));
             }
         }
+        rejected.sort(java.util.Comparator.comparingInt(RejectedRow::lineNumber));
         List<Transaction> duplicates = findDuplicates(candidates);
         candidates.removeAll(duplicates);
         return new ImportResult(file, parser.getBankName(), accountType.strip(), candidates, duplicates, rejected);

@@ -72,6 +72,10 @@ public class ImportServiceTest {
         assertEquals(1, result.getImportedCount());
         assertEquals(4, result.getRejectedCount());
         assertTrue(result.getSummary().contains("rejected 4"));
+        // rejected rows point at their real line in the file, in file order
+        assertEquals(java.util.List.of(1, 2, 3, 4),
+                result.getRejectedRows().stream().map(RejectedRow::lineNumber).toList());
+        assertEquals("09/14/2026,,5.00,,1", result.getRejectedRows().get(1).rawLine());
     }
 
     @Test
