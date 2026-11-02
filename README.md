@@ -84,7 +84,7 @@ java -jar target/finance-assistant.jar categorize
 ```
 
 Error cases to try: `sample-data/notes.txt` (not a CSV), `sample-data/empty.csv` (empty file),
-`sample-data/td-with-errors.csv` (invalid rows and a duplicate), `--bank RBC` (unsupported bank),
+`sample-data/td-with-errors.csv` (invalid rows and a repeated row), `--bank RBC` (unsupported bank),
 a zero or negative budget amount.
 
 Use `--db <file>` with any command to work on a separate database (handy for demos).

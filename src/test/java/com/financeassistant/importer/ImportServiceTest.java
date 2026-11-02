@@ -39,22 +39,38 @@ public class ImportServiceTest {
     }
 
     @Test
-    public void duplicatesInFileAndDatabaseAreSkipped() throws Exception {
-        File file = csv("09/14/2026,TIM HORTONS,4.35,,1\n09/14/2026,TIM HORTONS,4.35,,1\n");
-        ImportResult first = service.confirmImport(service.previewImport(file, "TD", "Chequing"));
-        assertEquals(1, first.getImportedCount());
-        assertEquals(1, first.getSkippedCount());
+    public void identicalRowsInOneFileAreKeptButReImportsAreSkipped() throws Exception {
+        // two identical vending-machine charges on the same day are two real purchases
+        File file = csv("09/14/2026,LOYALTY VENDING,2.36,,1\n09/14/2026,LOYALTY VENDING,2.36,,1\n09/15/2026,A,1.00,,1\n");
+        ImportResult first = service.previewImport(file, "TD", "Chequing");
+        assertEquals(3, first.getValidRows().size());
+        assertEquals(2, first.getRepeatedRows().size());
+        service.confirmImport(first);
+        assertEquals(3, first.getImportedCount());
+        assertEquals(0, first.getSkippedCount());
 
         // importing the same statement again adds nothing
         ImportResult second = service.previewImport(file, "TD", "Chequing");
         assertEquals(0, second.getValidRows().size());
-        assertEquals(2, second.getSkippedCount());
+        assertEquals(3, second.getSkippedCount());
         service.confirmImport(second);
-        assertEquals(1, db.findAll(Transaction.class).size());
+        assertEquals(3, db.findAll(Transaction.class).size());
 
         // the same row in a different account is not a duplicate
         service.confirmImport(service.previewImport(file, "TD", "Savings"));
-        assertEquals(2, db.findAll(Transaction.class).size());
+        assertEquals(6, db.findAll(Transaction.class).size());
+    }
+
+    @Test
+    public void overlappingStatementOnlyAddsTheNewRows() throws Exception {
+        service.confirmImport(service.previewImport(
+                csv("09/14/2026,VEND,2.36,,1\n09/20/2026,B,5.00,,1\n"), "TD", "Chequing"));
+        // next statement overlaps: repeats both old rows, adds a third identical charge and a new row
+        ImportResult next = service.previewImport(
+                csv("09/14/2026,VEND,2.36,,1\n09/14/2026,VEND,2.36,,1\n09/20/2026,B,5.00,,1\n10/01/2026,C,7.00,,1\n"),
+                "TD", "Chequing");
+        assertEquals(2, next.getSkippedCount());
+        assertEquals(2, next.getValidRows().size());
     }
 
     @Test

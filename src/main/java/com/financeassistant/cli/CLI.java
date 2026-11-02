@@ -143,6 +143,12 @@ public class CLI {
         for (RejectedRow r : preview.getRejectedRows()) {
             out.println("  rejected " + r);
         }
+        List<Transaction> repeated = preview.getRepeatedRows();
+        if (!repeated.isEmpty()) {
+            out.println("  note: " + repeated.size() + " rows appear more than once in this file (same date, amount and"
+                    + " description). They will all be imported - check they are separate purchases:");
+            repeated.forEach(t -> out.printf(Locale.ROOT, "    %s  %10.2f  %s%n", t.getDate(), t.getAmount(), t.getDescription()));
+        }
         out.println(preview.getSummary());
         if (rows.isEmpty()) {
             out.println("Nothing new to import.");

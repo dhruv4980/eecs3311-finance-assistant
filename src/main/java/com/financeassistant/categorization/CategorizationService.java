@@ -18,6 +18,9 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * F02 Automatic categorization and F03 manual correction.
@@ -218,14 +221,32 @@ public class CategorizationService {
         return db.save(new CategoryRule(normalized, canonical));
     }
 
+    /** Words that start two-word city names, e.g. NORTH YORK, RICHMOND HILL. */
+    private static final Set<String> CITY_PREFIXES = Set.of(
+            "NORTH", "SOUTH", "EAST", "WEST", "NEW", "ST", "ST.", "PORT", "RICHMOND", "NIAGARA", "THUNDER", "SAULT");
+
     /**
      * Merchant part of a description: words up to the first store number or
-     * reference code, at most three words. "LOBLAWS #1024 TORONTO" -> "LOBLAWS".
+     * reference code, at most three words. A trailing "CITY, PROVINCE" (as in
+     * CIBC exports) is removed first. "LOBLAWS #1024 TORONTO" -> "LOBLAWS";
+     * "Albion Meat ETOBICOKE, ON" -> "ALBION MEAT".
      */
     public static String suggestPattern(String description) {
         String normalized = CategoryRule.normalize(description);
+        String merchant = normalized;
+        Matcher province = Pattern.compile("^(.*\\S)\\s*,\\s*[A-Z]{2}$").matcher(normalized);
+        if (province.matches()) {
+            List<String> words = new ArrayList<>(List.of(province.group(1).split(" ")));
+            if (words.size() > 1) {
+                words.remove(words.size() - 1); // the city
+            }
+            if (words.size() > 1 && CITY_PREFIXES.contains(words.get(words.size() - 1))) {
+                words.remove(words.size() - 1);
+            }
+            merchant = String.join(" ", words);
+        }
         List<String> words = new ArrayList<>();
-        for (String word : normalized.split(" ")) {
+        for (String word : merchant.split(" ")) {
             if (word.startsWith("#") || word.chars().anyMatch(Character::isDigit) || words.size() == 3) {
                 break;
             }

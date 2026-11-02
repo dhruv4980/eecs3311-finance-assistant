@@ -67,6 +67,11 @@ public class ImportResult {
         confirmed = true;
     }
 
+    /** Identical rows within this file; they are kept, but the user may want to check them. */
+    public List<Transaction> getRepeatedRows() {
+        return ImportService.findRepeatedRows(validRows);
+    }
+
     public int getImportedCount() {
         return savedRows.size();
     }

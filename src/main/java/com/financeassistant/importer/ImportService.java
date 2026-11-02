@@ -6,11 +6,11 @@ import com.financeassistant.model.Transaction;
 import java.io.File;
 import java.time.LocalDate;
 import java.util.ArrayList;
-import java.util.HashSet;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 
 /**
  * F01 Importing data. Two steps, so the user can check the rows first:
@@ -100,24 +100,37 @@ public class ImportService {
     }
 
     /**
-     * Rows that are already in the database, or that repeat an earlier row in
-     * the same file (same account, date, amount and description).
+     * Rows that were already imported. Matching is by count: if the database
+     * already holds two identical rows (same account, date, amount and
+     * description) the first two copies in the file are duplicates and any
+     * further copy is new. This keeps genuine repeat purchases - two identical
+     * vending-machine charges on the same day - while still skipping a
+     * statement (or the overlapping part of one) that was imported before.
      */
     public List<Transaction> findDuplicates(List<Transaction> rows) {
-        Set<String> seen = new HashSet<>();
+        Map<String, Integer> alreadyStored = new HashMap<>();
         if (!rows.isEmpty() && rows.get(0).getAccountId() != 0) {
             int accountId = rows.get(0).getAccountId();
             for (Transaction existing : db.find(Transaction.class, t -> t.getAccountId() == accountId)) {
-                seen.add(existing.duplicateKey());
+                alreadyStored.merge(existing.duplicateKey(), 1, Integer::sum);
             }
         }
         List<Transaction> duplicates = new ArrayList<>();
+        Map<String, Integer> seenInFile = new HashMap<>();
         for (Transaction t : rows) {
-            if (!seen.add(t.duplicateKey())) {
+            int occurrence = seenInFile.merge(t.duplicateKey(), 1, Integer::sum);
+            if (occurrence <= alreadyStored.getOrDefault(t.duplicateKey(), 0)) {
                 duplicates.add(t);
             }
         }
         return duplicates;
+    }
+
+    /** Rows that appear more than once in the same file. They are imported, but the preview points them out. */
+    public static List<Transaction> findRepeatedRows(List<Transaction> rows) {
+        Map<String, Integer> counts = new HashMap<>();
+        rows.forEach(t -> counts.merge(t.duplicateKey(), 1, Integer::sum));
+        return rows.stream().filter(t -> counts.get(t.duplicateKey()) > 1).toList();
     }
 
     public List<String> supportedBanks() {

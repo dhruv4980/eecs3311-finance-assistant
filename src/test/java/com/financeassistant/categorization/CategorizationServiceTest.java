@@ -164,6 +164,13 @@ public class CategorizationServiceTest {
         assertEquals("SPOTIFY", CategorizationService.suggestPattern("SPOTIFY P2B4C1"));
         assertEquals("PAYROLL DEP YORK", CategorizationService.suggestPattern("PAYROLL DEP YORK CAMPUS SVCS"));
         assertEquals("#123", CategorizationService.suggestPattern("#123"));
+        // CIBC descriptions end with "CITY, PROVINCE"
+        assertEquals("ALBION MEAT", CategorizationService.suggestPattern("Albion Meat ETOBICOKE, ON"));
+        assertEquals("LOYALTY VENDING", CategorizationService.suggestPattern("LOYALTY VENDING NORTH YORK, ON"));
+        assertEquals("PETRO-CANADA", CategorizationService.suggestPattern("PETRO-CANADA 10450 SCHOMBERG, ON"));
+        assertEquals("PRESTO", CategorizationService.suggestPattern("PRESTO FARE/SPMMNPQ758 Toronto, ON"));
+        assertEquals("UBER CANADA/UBEREATS", CategorizationService.suggestPattern("UBER CANADA/UBEREATS TORONTO, ON"));
+        assertEquals("ARITZIA.COM", CategorizationService.suggestPattern("ARITZIA.COM VANCOUVER, BC"));
     }
 
     @Test
