@@ -18,6 +18,8 @@ import com.financeassistant.importer.ImportResult;
 import com.financeassistant.importer.RejectedRow;
 import com.financeassistant.model.CategoryRule;
 import com.financeassistant.model.ChatMessage;
+import com.financeassistant.model.Subscription;
+import com.financeassistant.subscription.SubscriptionScan;
 import com.financeassistant.model.Transaction;
 import java.io.BufferedReader;
 import java.io.File;
@@ -112,6 +114,7 @@ public class CLI {
                 case "rules" -> rules(args);
                 case "budget" -> budget(args);
                 case "months" -> controller.getMonths().forEach(out::println);
+                case "subscriptions", "subs" -> subscriptions(args);
                 case "ask" -> ask(String.join(" ", args.positional));
                 case "chat" -> chat(args);
                 default -> {
@@ -296,6 +299,48 @@ public class CLI {
         }
     }
 
+    private void subscriptions(Args args) {
+        String action = args.positional.isEmpty() ? "list" : args.positional.get(0);
+        switch (action) {
+            case "list" -> {
+                SubscriptionScan scan = controller.detectSubscriptions();
+                if (scan.message() != null) {
+                    out.println(scan.message());
+                }
+                if (scan.subscriptions().isEmpty()) {
+                    return;
+                }
+                out.printf("%-4s %-26s %-20s %9s %-9s %9s %-11s %s%n",
+                        "ID", "NAME", "TYPE", "AMOUNT", "EVERY", "PER MONTH", "NEXT", "NOTES");
+                double total = 0;
+                for (Subscription s : scan.subscriptions()) {
+                    String notes = (s.isActive() ? "" : "stopped? ")
+                            + (s.isPriceIncreased() ? String.format(Locale.ROOT, "price up from $%.2f ", s.getPreviousAmount()) : "")
+                            + (s.getStatus() == Subscription.Status.CONFIRMED ? "confirmed" : "");
+                    out.printf(Locale.ROOT, "%-4d %-26s %-20s %9.2f %-9s %9.2f %-11s %s%n", s.getId(), truncate(s.getName(), 26),
+                            truncate(s.getServiceType() == null ? "?" : s.getServiceType(), 20), s.getAmount(),
+                            s.getFrequency().name().toLowerCase(Locale.ROOT), s.getMonthlyCost(),
+                            s.isActive() ? s.getNextExpected() : "-", notes.strip());
+                    if (s.isActive()) {
+                        total += s.getMonthlyCost();
+                    }
+                }
+                out.printf(Locale.ROOT, "Active recurring charges: about $%.2f a month.%n", total);
+                if (scan.aiError() != null) {
+                    out.println("(Service types not labelled - AI unavailable: " + scan.aiError() + ")");
+                }
+                out.println();
+                out.println(controller.getOverlapMessage());
+            }
+            case "confirm" -> out.println("Confirmed: " + controller.confirmSubscription(args.requireInt("id")).getName());
+            case "rename" -> out.println("Renamed to: "
+                    + controller.renameSubscription(args.requireInt("id"), args.require("name", "\"Netflix\"")).getName());
+            case "not" -> out.println("Hidden - " + controller.markNotSubscription(args.requireInt("id")).getName()
+                    + " will not be shown as a subscription again.");
+            default -> throw new IllegalArgumentException("Use: subscriptions | subscriptions confirm|rename|not --id N");
+        }
+    }
+
     private void ask(String question) {
         if (question.isBlank()) {
             throw new IllegalArgumentException("Type a question, e.g.: ask \"How much did I spend on dining in September?\"");
@@ -350,6 +395,8 @@ public class CLI {
                   budget set --month M --category C --amount A [--overwrite]              F04 set a budget
                   budget status [--month M]                                               F05 budget progress + alerts
                   budget delete --month M --category C
+                  subscriptions                                                           F06 detect recurring charges + overlaps
+                  subscriptions confirm|not --id N | subscriptions rename --id N --name X F06 manage a subscription
                   ask "<question>"                                                        F07 ask the AI agent
                   chat | chat history | chat clear                                        F07 conversation with the agent
                   months                                                                  months that have data

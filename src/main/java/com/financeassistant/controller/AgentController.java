@@ -5,6 +5,7 @@ import com.financeassistant.agent.BudgetTool;
 import com.financeassistant.agent.ConversationMemory;
 import com.financeassistant.agent.FinanceAgent;
 import com.financeassistant.agent.SpendingTool;
+import com.financeassistant.agent.SubscriptionTool;
 import com.financeassistant.agent.TransactionSearchTool;
 import com.financeassistant.budget.AlertObserver;
 import com.financeassistant.budget.BudgetExistsException;
@@ -26,6 +27,9 @@ import com.financeassistant.llm.LLMClients;
 import com.financeassistant.llm.LLMException;
 import com.financeassistant.model.Budget;
 import com.financeassistant.model.ChatMessage;
+import com.financeassistant.model.Subscription;
+import com.financeassistant.subscription.SubscriptionScan;
+import com.financeassistant.subscription.SubscriptionService;
 import com.financeassistant.model.CategoryRule;
 import com.financeassistant.model.Transaction;
 import java.io.File;
@@ -44,6 +48,7 @@ public class AgentController {
     private final ImportService importService;
     private final CategorizationService categorizationService;
     private final BudgetService budgetService;
+    private final SubscriptionService subscriptionService;
     private final ConversationMemory memory;
     private final FinanceAgent agent;
 
@@ -52,11 +57,13 @@ public class AgentController {
         this.importService = new ImportService(new ParserFactory());
         this.categorizationService = new CategorizationService(llm);
         this.budgetService = new BudgetService();
+        this.subscriptionService = new SubscriptionService(llm);
         this.memory = new ConversationMemory(10);
         this.agent = new FinanceAgent(llm, memory, 6);
         agent.registerTool(new SpendingTool(categorizationService));
         agent.registerTool(new TransactionSearchTool());
         agent.registerTool(new BudgetTool(budgetService));
+        agent.registerTool(new SubscriptionTool(subscriptionService));
         agent.setContext(() -> {
             List<String> months = getMonths();
             return months.isEmpty() ? "The user has not imported any transactions yet."
@@ -145,6 +152,33 @@ public class AgentController {
     public String getDefaultMonth() {
         List<String> months = getMonths();
         return months.isEmpty() ? YearMonth.now().toString() : months.get(0);
+    }
+
+    // ------------------------------------------------------------ F06 subscriptions
+
+    /** Re-scans the transactions for recurring charges (and labels new ones with AI). */
+    public SubscriptionScan detectSubscriptions() {
+        return subscriptionService.detectSubscriptions();
+    }
+
+    public List<Subscription> getSubscriptions() {
+        return subscriptionService.getSubscriptions();
+    }
+
+    public Subscription confirmSubscription(int id) {
+        return subscriptionService.confirm(id);
+    }
+
+    public Subscription renameSubscription(int id, String name) {
+        return subscriptionService.rename(id, name);
+    }
+
+    public Subscription markNotSubscription(int id) {
+        return subscriptionService.markNotSubscription(id);
+    }
+
+    public String getOverlapMessage() {
+        return subscriptionService.getOverlapMessage();
     }
 
     // ------------------------------------------------------------ F07 chat

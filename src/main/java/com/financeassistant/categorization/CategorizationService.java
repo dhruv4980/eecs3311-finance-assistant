@@ -247,7 +247,9 @@ public class CategorizationService {
         }
         List<String> words = new ArrayList<>();
         for (String word : merchant.split(" ")) {
-            if (word.startsWith("#") || word.chars().anyMatch(Character::isDigit) || words.size() == 3) {
+            boolean code = word.startsWith("#") || word.chars().anyMatch(Character::isDigit);
+            boolean punctuation = word.chars().noneMatch(Character::isLetter); // "-", "@", "&"
+            if (code || punctuation || words.size() == 3) {
                 break;
             }
             words.add(word);

@@ -171,6 +171,7 @@ public class CategorizationServiceTest {
         assertEquals("PRESTO", CategorizationService.suggestPattern("PRESTO FARE/SPMMNPQ758 Toronto, ON"));
         assertEquals("UBER CANADA/UBEREATS", CategorizationService.suggestPattern("UBER CANADA/UBEREATS TORONTO, ON"));
         assertEquals("ARITZIA.COM", CategorizationService.suggestPattern("ARITZIA.COM VANCOUVER, BC"));
+        assertEquals("RENT PAYMENT", CategorizationService.suggestPattern("RENT PAYMENT - MAPLE PROPERTIES"));
     }
 
     @Test
