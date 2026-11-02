@@ -16,7 +16,9 @@ The Stage 1 design report (PDFs, UML `.uxf` files and diagram PNGs) is in the re
 | F03 Manual category correction + rules | Implemented (CLI) |
 | F04 Monthly budgets | Implemented (CLI) |
 | F05 Budget alerts (80% / exceeded) | Implemented (CLI) |
-| F06 Subscriptions, F07 Chat agent, F08 Savings goals | In progress |
+| F06 Subscription detection + overlap advice | Implemented (CLI) |
+| F07 Chat with the agent (tool use + memory) | Implemented (CLI) |
+| F08 Savings goals | Implemented (CLI) |
 | F09 Monthly report, F10 Report export, GUI | Planned |
 
 ## Prerequisites
@@ -81,11 +83,24 @@ java -jar target/finance-assistant.jar budget status --month 2026-09
 
 # If Claude was unavailable during an import, retry the AI step later
 java -jar target/finance-assistant.jar categorize
+
+# F06: recurring charges, price increases and overlapping services
+java -jar target/finance-assistant.jar subscriptions
+java -jar target/finance-assistant.jar subscriptions not --id <ID>      # hide a false positive
+
+# F07: ask the agent (it looks up your data with tools, then answers)
+java -jar target/finance-assistant.jar ask "Where did most of my money go in September?"
+java -jar target/finance-assistant.jar chat                             # back-and-forth conversation
+
+# F08: savings goals
+java -jar target/finance-assistant.jar goals create --name "New laptop" --target 1500 --deadline 2027-04-30
+java -jar target/finance-assistant.jar goals contribute --id <ID> --amount 200
+java -jar target/finance-assistant.jar goals status --id <ID>
 ```
 
 Error cases to try: `sample-data/notes.txt` (not a CSV), `sample-data/empty.csv` (empty file),
 `sample-data/td-with-errors.csv` (invalid rows and a repeated row), `--bank RBC` (unsupported bank),
-a zero or negative budget amount.
+a zero or negative budget amount, a goal with a target of 0, contributing to a completed goal.
 
 Use `--db <file>` with any command to work on a separate database (handy for demos).
 
@@ -100,6 +115,10 @@ src/main/java/com/financeassistant/
   llm/             LLMClient (Target), ClaudeClient (Adapter), AnthropicApi (Adaptee)
   categorization/  CategorizationService - rules first, then Claude
   budget/          BudgetService (Observer subject), AlertObserver, CliAlertPrinter
+  subscription/    SubscriptionService - recurring-charge detection, AI service labels, overlaps
+  goal/            GoalService, Goal (State context), GoalState, InProgressState, CompletedState
+  agent/           FinanceAgent (tool loop), Tool + SpendingTool, TransactionSearchTool, BudgetTool,
+                   SubscriptionTool, GoalTool, ConversationMemory
   controller/      AgentController (Facade used by both CLI and GUI)
   cli/             CLI
 src/test/java/     JUnit tests (no network; Claude is replaced by a fake)
@@ -115,6 +134,7 @@ sample-data/       Safe, made-up statements for demos and tests
 | Adapter | `llm/ClaudeClient` | Hide Anthropic's API format behind `generate(prompt)` |
 | Observer | `budget/BudgetService` + `AlertObserver` | Send alerts to GUI and console without coupling |
 | Facade | `controller/AgentController` | One entry point shared by CLI and GUI |
+| State | `goal/Goal` + `InProgressState` / `CompletedState` | A goal behaves differently once completed |
 
 ## Security
 

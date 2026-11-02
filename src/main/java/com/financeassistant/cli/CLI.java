@@ -13,6 +13,8 @@ import com.financeassistant.config.Config;
 import com.financeassistant.controller.AgentController;
 import com.financeassistant.controller.ImportOutcome;
 import com.financeassistant.db.DatabaseManager;
+import com.financeassistant.goal.Goal;
+import com.financeassistant.goal.GoalProgress;
 import com.financeassistant.importer.ImportException;
 import com.financeassistant.importer.ImportResult;
 import com.financeassistant.importer.RejectedRow;
@@ -28,6 +30,8 @@ import java.io.InputStreamReader;
 import java.io.PrintStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
+import java.time.LocalDate;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -115,6 +119,7 @@ public class CLI {
                 case "budget" -> budget(args);
                 case "months" -> controller.getMonths().forEach(out::println);
                 case "subscriptions", "subs" -> subscriptions(args);
+                case "goals", "goal" -> goals(args);
                 case "ask" -> ask(String.join(" ", args.positional));
                 case "chat" -> chat(args);
                 default -> {
@@ -341,6 +346,67 @@ public class CLI {
         }
     }
 
+    private void goals(Args args) {
+        String action = args.positional.isEmpty() ? "list" : args.positional.get(0);
+        switch (action) {
+            case "list" -> {
+                List<Goal> goals = controller.getGoals();
+                if (goals.isEmpty()) {
+                    out.println("No goals yet. Create one with: goals create --name \"Laptop\" --target 1500 --deadline 2027-04-30");
+                    return;
+                }
+                out.printf("%-4s %-22s %10s %10s %6s %-11s %10s %s%n", "ID", "GOAL", "SAVED", "TARGET", "DONE", "DEADLINE", "PER MONTH", "STATUS");
+                for (Goal g : goals) {
+                    GoalProgress p = controller.getGoalProgress(g);
+                    String status = g.isCompleted() ? "completed" : p.estimatedCompletion() == null ? "not started"
+                            : p.onTrack() ? "on track" : "behind";
+                    out.printf(Locale.ROOT, "%-4d %-22s %10.2f %10.2f %5.0f%% %-11s %10s %s%n", g.getId(), truncate(g.getName(), 22),
+                            g.getContributed(), g.getTargetAmount(), p.percent(), g.getDeadline(),
+                            g.showsRequiredContribution() ? String.format(Locale.ROOT, "%.2f", p.requiredMonthly()) : "-", status);
+                }
+            }
+            case "create" -> {
+                Goal g = controller.createGoal(args.require("name", "\"Laptop\""), args.requireAmount("target"),
+                        parseDate(args.require("deadline", "2027-04-30")));
+                GoalProgress p = controller.getGoalProgress(g);
+                out.printf(Locale.ROOT, "Goal #%d created: save $%.2f by %s - about $%.2f a month.%n",
+                        g.getId(), g.getTargetAmount(), g.getDeadline(), p.requiredMonthly());
+            }
+            case "contribute" -> {
+                Goal g;
+                try {
+                    g = controller.addContribution(args.requireInt("id"), args.requireAmount("amount"));
+                } catch (IllegalStateException e) {
+                    throw new IllegalArgumentException(e.getMessage());
+                }
+                out.printf(Locale.ROOT, "Saved. \"%s\" is now at $%.2f of $%.2f.%n", g.getName(), g.getContributed(), g.getTargetAmount());
+                out.println(controller.getGoalMessage(g));
+            }
+            case "status" -> {
+                Goal g = controller.getGoal(args.requireInt("id"));
+                GoalProgress p = controller.getGoalProgress(g);
+                out.printf(Locale.ROOT, "%s: $%.2f of $%.2f (%.0f%%), deadline %s%n", g.getName(), g.getContributed(),
+                        g.getTargetAmount(), p.percent(), g.getDeadline());
+                if (g.showsRequiredContribution()) {
+                    out.printf(Locale.ROOT, "Needed: $%.2f a month for %d month(s). Saving pace: $%.2f a month. Estimated finish: %s%n",
+                            p.requiredMonthly(), p.monthsLeft(), p.averageMonthly(),
+                            p.estimatedCompletion() == null ? "-" : p.estimatedCompletion());
+                }
+                out.println(controller.getGoalMessage(g));
+            }
+            case "delete" -> out.println(controller.deleteGoal(args.requireInt("id")) ? "Goal deleted." : "No such goal.");
+            default -> throw new IllegalArgumentException("Use: goals | goals create | goals contribute | goals status | goals delete");
+        }
+    }
+
+    private static LocalDate parseDate(String text) {
+        try {
+            return LocalDate.parse(text.strip());
+        } catch (DateTimeParseException e) {
+            throw new IllegalArgumentException("Dates look like 2027-04-30, not '" + text + "'");
+        }
+    }
+
     private void ask(String question) {
         if (question.isBlank()) {
             throw new IllegalArgumentException("Type a question, e.g.: ask \"How much did I spend on dining in September?\"");
@@ -397,6 +463,9 @@ public class CLI {
                   budget delete --month M --category C
                   subscriptions                                                           F06 detect recurring charges + overlaps
                   subscriptions confirm|not --id N | subscriptions rename --id N --name X F06 manage a subscription
+                  goals | goals status --id N                                             F08 savings goals
+                  goals create --name X --target A --deadline YYYY-MM-DD
+                  goals contribute --id N --amount A | goals delete --id N
                   ask "<question>"                                                        F07 ask the AI agent
                   chat | chat history | chat clear                                        F07 conversation with the agent
                   months                                                                  months that have data

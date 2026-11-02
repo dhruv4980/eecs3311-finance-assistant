@@ -4,6 +4,7 @@ import com.financeassistant.agent.AgentAnswer;
 import com.financeassistant.agent.BudgetTool;
 import com.financeassistant.agent.ConversationMemory;
 import com.financeassistant.agent.FinanceAgent;
+import com.financeassistant.agent.GoalTool;
 import com.financeassistant.agent.SpendingTool;
 import com.financeassistant.agent.SubscriptionTool;
 import com.financeassistant.agent.TransactionSearchTool;
@@ -18,6 +19,10 @@ import com.financeassistant.categorization.RecategorizeResult;
 import com.financeassistant.categorization.RuleConflictException;
 import com.financeassistant.config.Config;
 import com.financeassistant.db.DatabaseManager;
+import com.financeassistant.goal.Goal;
+import com.financeassistant.goal.GoalContribution;
+import com.financeassistant.goal.GoalProgress;
+import com.financeassistant.goal.GoalService;
 import com.financeassistant.importer.ImportException;
 import com.financeassistant.importer.ImportResult;
 import com.financeassistant.importer.ImportService;
@@ -33,6 +38,7 @@ import com.financeassistant.subscription.SubscriptionService;
 import com.financeassistant.model.CategoryRule;
 import com.financeassistant.model.Transaction;
 import java.io.File;
+import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.Comparator;
 import java.util.List;
@@ -49,6 +55,7 @@ public class AgentController {
     private final CategorizationService categorizationService;
     private final BudgetService budgetService;
     private final SubscriptionService subscriptionService;
+    private final GoalService goalService;
     private final ConversationMemory memory;
     private final FinanceAgent agent;
 
@@ -58,12 +65,14 @@ public class AgentController {
         this.categorizationService = new CategorizationService(llm);
         this.budgetService = new BudgetService();
         this.subscriptionService = new SubscriptionService(llm);
+        this.goalService = new GoalService(llm);
         this.memory = new ConversationMemory(10);
         this.agent = new FinanceAgent(llm, memory, 6);
         agent.registerTool(new SpendingTool(categorizationService));
         agent.registerTool(new TransactionSearchTool());
         agent.registerTool(new BudgetTool(budgetService));
         agent.registerTool(new SubscriptionTool(subscriptionService));
+        agent.registerTool(new GoalTool(goalService));
         agent.setContext(() -> {
             List<String> months = getMonths();
             return months.isEmpty() ? "The user has not imported any transactions yet."
@@ -179,6 +188,41 @@ public class AgentController {
 
     public String getOverlapMessage() {
         return subscriptionService.getOverlapMessage();
+    }
+
+    // ------------------------------------------------------------ F08 savings goals
+
+    public Goal createGoal(String name, double target, LocalDate deadline) {
+        return goalService.createGoal(name, target, deadline);
+    }
+
+    public Goal addContribution(int goalId, double amount) {
+        return goalService.addContribution(goalId, amount);
+    }
+
+    public List<Goal> getGoals() {
+        return goalService.getGoals();
+    }
+
+    public Goal getGoal(int goalId) {
+        return goalService.getGoal(goalId);
+    }
+
+    public GoalProgress getGoalProgress(Goal goal) {
+        return goalService.getProgress(goal);
+    }
+
+    /** AI-written progress message for a goal in progress; a completion message once done. */
+    public String getGoalMessage(Goal goal) {
+        return goalService.getMessage(goal);
+    }
+
+    public List<GoalContribution> getGoalContributions(int goalId) {
+        return goalService.getContributions(goalId);
+    }
+
+    public boolean deleteGoal(int goalId) {
+        return goalService.deleteGoal(goalId);
     }
 
     // ------------------------------------------------------------ F07 chat
