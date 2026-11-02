@@ -1,5 +1,6 @@
 package com.financeassistant.cli;
 
+import com.financeassistant.agent.AgentAnswer;
 import com.financeassistant.budget.BudgetExistsException;
 import com.financeassistant.budget.BudgetService;
 import com.financeassistant.budget.BudgetStatus;
@@ -16,6 +17,7 @@ import com.financeassistant.importer.ImportException;
 import com.financeassistant.importer.ImportResult;
 import com.financeassistant.importer.RejectedRow;
 import com.financeassistant.model.CategoryRule;
+import com.financeassistant.model.ChatMessage;
 import com.financeassistant.model.Transaction;
 import java.io.BufferedReader;
 import java.io.File;
@@ -110,6 +112,8 @@ public class CLI {
                 case "rules" -> rules(args);
                 case "budget" -> budget(args);
                 case "months" -> controller.getMonths().forEach(out::println);
+                case "ask" -> ask(String.join(" ", args.positional));
+                case "chat" -> chat(args);
                 default -> {
                     out.println("Unknown command '" + command + "'. Type 'help' for the list of commands.");
                     return false;
@@ -292,6 +296,48 @@ public class CLI {
         }
     }
 
+    private void ask(String question) {
+        if (question.isBlank()) {
+            throw new IllegalArgumentException("Type a question, e.g.: ask \"How much did I spend on dining in September?\"");
+        }
+        AgentAnswer answer = controller.askQuestion(question);
+        for (AgentAnswer.ToolCall call : answer.toolCalls()) {
+            out.println("  (looked up " + call.tool() + " " + call.args() + ")");
+        }
+        out.println(answer.text());
+    }
+
+    /** "chat" starts a conversation; "chat history" and "chat clear" manage the agent's memory. */
+    private void chat(Args args) {
+        String action = args.positional.isEmpty() ? "" : args.positional.get(0);
+        switch (action) {
+            case "history" -> {
+                List<ChatMessage> history = controller.getChatHistory();
+                if (history.isEmpty()) {
+                    out.println("No conversation yet.");
+                }
+                history.forEach(m -> out.println((m.getRole() == ChatMessage.Role.USER ? "You:   " : "Agent: ") + m.getText()));
+            }
+            case "clear" -> {
+                controller.clearChat();
+                out.println("Conversation memory cleared.");
+            }
+            case "" -> {
+                out.println("Chat with your finance assistant (" + controller.describeAi() + "). Empty line to stop.");
+                while (true) {
+                    out.print("you> ");
+                    out.flush();
+                    String line = readLine();
+                    if (line == null || line.isBlank()) {
+                        return;
+                    }
+                    ask(line);
+                }
+            }
+            default -> throw new IllegalArgumentException("Use: chat | chat history | chat clear");
+        }
+    }
+
     private void printHelp() {
         out.println("""
                 Commands (options in [brackets] are optional; month looks like 2026-09):
@@ -304,6 +350,8 @@ public class CLI {
                   budget set --month M --category C --amount A [--overwrite]              F04 set a budget
                   budget status [--month M]                                               F05 budget progress + alerts
                   budget delete --month M --category C
+                  ask "<question>"                                                        F07 ask the AI agent
+                  chat | chat history | chat clear                                        F07 conversation with the agent
                   months                                                                  months that have data
                   help | exit
                 Global option: --db <file>  use a different database file""");

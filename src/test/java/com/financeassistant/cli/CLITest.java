@@ -98,6 +98,32 @@ public class CLITest {
     }
 
     @Test
+    public void askShowsWhatTheAgentLookedUpAndItsAnswer() {
+        java.util.Deque<String> replies = new java.util.ArrayDeque<>(List.of(
+                "{\"tool\": \"get_spending\", \"args\": {\"month\": \"2026-09\"}}",
+                "{\"answer\": \"You spent $0.00 in September.\"}",
+                "{\"answer\": \"Nothing else to report.\"}"));
+        ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+        CLI cli = new CLI(new AgentController(new FakeLLMClient(p -> replies.poll())),
+                new BufferedReader(new StringReader("And August?\n\n")), new PrintStream(bytes, true));
+
+        cli.run(new String[]{"ask", "How much did I spend in September?"});
+        cli.run(new String[]{"chat"});
+        cli.run(new String[]{"chat", "history"});
+        String output = bytes.toString();
+
+        assertTrue(output, output.contains("(looked up get_spending {\"month\":\"2026-09\"})"));
+        assertTrue(output.contains("You spent $0.00 in September."));
+        assertTrue(output.contains("Nothing else to report."));
+        assertTrue(output.contains("You:   How much did I spend in September?"));
+        assertTrue(output.contains("Agent: Nothing else to report."));
+
+        assertTrue(run("", "chat", "clear").contains("cleared"));
+        assertTrue(run("", "chat", "history").contains("No conversation yet"));
+        assertTrue(run("", "ask").contains("Type a question"));
+    }
+
+    @Test
     public void tokenizeKeepsQuotedText() {
         assertEquals(List.of("import", "--file", "my statement.csv", "--yes"),
                 Args.tokenize("import --file \"my statement.csv\"  --yes"));
