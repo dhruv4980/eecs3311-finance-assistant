@@ -1,5 +1,11 @@
 package com.financeassistant.controller;
 
+import com.financeassistant.agent.AgentAnswer;
+import com.financeassistant.agent.BudgetTool;
+import com.financeassistant.agent.ConversationMemory;
+import com.financeassistant.agent.FinanceAgent;
+import com.financeassistant.agent.SpendingTool;
+import com.financeassistant.agent.TransactionSearchTool;
 import com.financeassistant.budget.AlertObserver;
 import com.financeassistant.budget.BudgetExistsException;
 import com.financeassistant.budget.BudgetService;
@@ -17,7 +23,9 @@ import com.financeassistant.importer.ImportService;
 import com.financeassistant.importer.ParserFactory;
 import com.financeassistant.llm.LLMClient;
 import com.financeassistant.llm.LLMClients;
+import com.financeassistant.llm.LLMException;
 import com.financeassistant.model.Budget;
+import com.financeassistant.model.ChatMessage;
 import com.financeassistant.model.CategoryRule;
 import com.financeassistant.model.Transaction;
 import java.io.File;
@@ -36,12 +44,25 @@ public class AgentController {
     private final ImportService importService;
     private final CategorizationService categorizationService;
     private final BudgetService budgetService;
+    private final ConversationMemory memory;
+    private final FinanceAgent agent;
 
     public AgentController(LLMClient llm) {
         this.llm = llm;
         this.importService = new ImportService(new ParserFactory());
         this.categorizationService = new CategorizationService(llm);
         this.budgetService = new BudgetService();
+        this.memory = new ConversationMemory(10);
+        this.agent = new FinanceAgent(llm, memory, 6);
+        agent.registerTool(new SpendingTool(categorizationService));
+        agent.registerTool(new TransactionSearchTool());
+        agent.registerTool(new BudgetTool(budgetService));
+        agent.setContext(() -> {
+            List<String> months = getMonths();
+            return months.isEmpty() ? "The user has not imported any transactions yet."
+                    : "Transactions exist for " + months.get(months.size() - 1) + " to " + months.get(0)
+                    + ". Categories: " + String.join(", ", getAllowedCategories()) + ".";
+        });
     }
 
     /** Builds a controller from .env / environment settings. */
@@ -124,6 +145,25 @@ public class AgentController {
     public String getDefaultMonth() {
         List<String> months = getMonths();
         return months.isEmpty() ? YearMonth.now().toString() : months.get(0);
+    }
+
+    // ------------------------------------------------------------ F07 chat
+
+    /** Asks the agent a question. If Claude cannot be reached the answer says so instead of throwing. */
+    public AgentAnswer askQuestion(String text) {
+        try {
+            return agent.run(text);
+        } catch (LLMException e) {
+            return AgentAnswer.unavailable(e.getMessage());
+        }
+    }
+
+    public List<ChatMessage> getChatHistory() {
+        return memory.getHistory();
+    }
+
+    public void clearChat() {
+        memory.clear();
     }
 
     // ------------------------------------------------------------ F04 / F05 budgets
