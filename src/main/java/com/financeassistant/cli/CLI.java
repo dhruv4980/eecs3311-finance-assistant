@@ -21,6 +21,9 @@ import com.financeassistant.importer.RejectedRow;
 import com.financeassistant.model.CategoryRule;
 import com.financeassistant.model.ChatMessage;
 import com.financeassistant.model.Subscription;
+import com.financeassistant.report.CategoryChange;
+import com.financeassistant.report.MonthlyReport;
+import com.financeassistant.report.UnusualTransaction;
 import com.financeassistant.subscription.SubscriptionScan;
 import com.financeassistant.model.Transaction;
 import java.io.BufferedReader;
@@ -120,6 +123,7 @@ public class CLI {
                 case "months" -> controller.getMonths().forEach(out::println);
                 case "subscriptions", "subs" -> subscriptions(args);
                 case "goals", "goal" -> goals(args);
+                case "report" -> report(args);
                 case "ask" -> ask(String.join(" ", args.positional));
                 case "chat" -> chat(args);
                 default -> {
@@ -407,6 +411,56 @@ public class CLI {
         }
     }
 
+    private void report(Args args) {
+        if (!args.positional.isEmpty() && args.positional.get(0).equals("list")) {
+            List<MonthlyReport> reports = controller.getReports();
+            if (reports.isEmpty()) {
+                out.println("No reports yet. Generate one with: report --month 2026-09");
+            }
+            reports.forEach(r -> out.printf(Locale.ROOT, "  %s  spent $%.2f  (generated %s)%n",
+                    r.getMonth(), r.getTotalSpending(), r.getGeneratedAt().replace('T', ' ')));
+            return;
+        }
+        out.println("Generating report...");
+        printReport(controller.generateMonthlyReport(month(args)));
+    }
+
+    private void printReport(MonthlyReport r) {
+        out.println("=".repeat(64));
+        out.println("Monthly report - " + r.getMonth());
+        out.println("=".repeat(64));
+        out.printf(Locale.ROOT, "Income   $%10.2f%nSpending $%10.2f%nNet      $%10.2f   (%d transactions)%n%n",
+                r.getTotalIncome(), r.getTotalSpending(), r.getNet(), r.getTransactionCount());
+        out.println(r.getSummary());
+        if (r.isAiSummary()) {
+            out.println("  - summary written by AI from the figures below");
+        }
+        out.println();
+        out.println("Spending by category:");
+        r.getCategoryBreakdown().forEach(c -> out.printf(Locale.ROOT, "  %-14s %10.2f  %5.1f%%%n", c.category(), c.total(), c.percent()));
+        if (!r.getChangesFromLastMonth().isEmpty()) {
+            out.println("Change from last month:");
+            for (CategoryChange c : r.getChangesFromLastMonth().subList(0, Math.min(5, r.getChangesFromLastMonth().size()))) {
+                out.printf(Locale.ROOT, "  %-14s %+10.2f  (%.2f -> %.2f)%n", c.category(), c.change(), c.lastMonth(), c.thisMonth());
+            }
+        }
+        if (!r.getBudgetStatus().isEmpty()) {
+            out.println("Budgets:");
+            r.getBudgetStatus().forEach(b -> out.printf(Locale.ROOT, "  %-14s %10.2f of %10.2f  %5.1f%% %s%n", b.category(),
+                    b.spent(), b.limit(), b.percentUsed(), b.level() == BudgetStatus.Level.OK ? "" : b.level().name()));
+        }
+        if (!r.getUnusualTransactions().isEmpty()) {
+            out.println("Unusual charges:");
+            for (UnusualTransaction u : r.getUnusualTransactions()) {
+                out.printf(Locale.ROOT, "  %s %-30s %9.2f  %s%n", u.date(), truncate(u.description(), 30), u.amount(), u.reason());
+            }
+        }
+        if (!r.getSubscriptionChanges().isEmpty()) {
+            out.println("Subscription changes:");
+            r.getSubscriptionChanges().forEach(s -> out.println("  " + s));
+        }
+    }
+
     private void ask(String question) {
         if (question.isBlank()) {
             throw new IllegalArgumentException("Type a question, e.g.: ask \"How much did I spend on dining in September?\"");
@@ -466,6 +520,7 @@ public class CLI {
                   goals | goals status --id N                                             F08 savings goals
                   goals create --name X --target A --deadline YYYY-MM-DD
                   goals contribute --id N --amount A | goals delete --id N
+                  report [--month M] | report list                                        F09 monthly report with AI summary
                   ask "<question>"                                                        F07 ask the AI agent
                   chat | chat history | chat clear                                        F07 conversation with the agent
                   months                                                                  months that have data

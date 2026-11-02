@@ -8,6 +8,7 @@ import com.financeassistant.agent.GoalTool;
 import com.financeassistant.agent.SpendingTool;
 import com.financeassistant.agent.SubscriptionTool;
 import com.financeassistant.agent.TransactionSearchTool;
+import com.financeassistant.agent.UnusualTransactionsTool;
 import com.financeassistant.budget.AlertObserver;
 import com.financeassistant.budget.BudgetExistsException;
 import com.financeassistant.budget.BudgetService;
@@ -33,6 +34,8 @@ import com.financeassistant.llm.LLMException;
 import com.financeassistant.model.Budget;
 import com.financeassistant.model.ChatMessage;
 import com.financeassistant.model.Subscription;
+import com.financeassistant.report.MonthlyReport;
+import com.financeassistant.report.ReportService;
 import com.financeassistant.subscription.SubscriptionScan;
 import com.financeassistant.subscription.SubscriptionService;
 import com.financeassistant.model.CategoryRule;
@@ -56,6 +59,7 @@ public class AgentController {
     private final BudgetService budgetService;
     private final SubscriptionService subscriptionService;
     private final GoalService goalService;
+    private final ReportService reportService;
     private final ConversationMemory memory;
     private final FinanceAgent agent;
 
@@ -66,6 +70,7 @@ public class AgentController {
         this.budgetService = new BudgetService();
         this.subscriptionService = new SubscriptionService(llm);
         this.goalService = new GoalService(llm);
+        this.reportService = new ReportService(llm, categorizationService, budgetService, subscriptionService);
         this.memory = new ConversationMemory(10);
         this.agent = new FinanceAgent(llm, memory, 6);
         agent.registerTool(new SpendingTool(categorizationService));
@@ -73,6 +78,7 @@ public class AgentController {
         agent.registerTool(new BudgetTool(budgetService));
         agent.registerTool(new SubscriptionTool(subscriptionService));
         agent.registerTool(new GoalTool(goalService));
+        agent.registerTool(new UnusualTransactionsTool(reportService));
         agent.setContext(() -> {
             List<String> months = getMonths();
             return months.isEmpty() ? "The user has not imported any transactions yet."
@@ -223,6 +229,22 @@ public class AgentController {
 
     public boolean deleteGoal(int goalId) {
         return goalService.deleteGoal(goalId);
+    }
+
+    // ------------------------------------------------------------ F09 monthly report
+
+    /** Computes the month's figures, has Claude summarize them and saves the report. */
+    public MonthlyReport generateMonthlyReport(String month) {
+        subscriptionService.detectSubscriptions(); // so subscription changes are current
+        return reportService.generateMonthlyReport(month);
+    }
+
+    public MonthlyReport getReport(String month) {
+        return reportService.getReport(month);
+    }
+
+    public List<MonthlyReport> getReports() {
+        return reportService.getReports();
     }
 
     // ------------------------------------------------------------ F07 chat
