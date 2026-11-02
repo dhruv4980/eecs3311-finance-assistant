@@ -20,6 +20,8 @@ import com.financeassistant.categorization.RecategorizeResult;
 import com.financeassistant.categorization.RuleConflictException;
 import com.financeassistant.config.Config;
 import com.financeassistant.db.DatabaseManager;
+import com.financeassistant.export.ExportFileExistsException;
+import com.financeassistant.export.ExportService;
 import com.financeassistant.goal.Goal;
 import com.financeassistant.goal.GoalContribution;
 import com.financeassistant.goal.GoalProgress;
@@ -41,6 +43,8 @@ import com.financeassistant.subscription.SubscriptionService;
 import com.financeassistant.model.CategoryRule;
 import com.financeassistant.model.Transaction;
 import java.io.File;
+import java.io.IOException;
+import java.nio.file.Path;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.Comparator;
@@ -60,6 +64,7 @@ public class AgentController {
     private final SubscriptionService subscriptionService;
     private final GoalService goalService;
     private final ReportService reportService;
+    private final ExportService exportService;
     private final ConversationMemory memory;
     private final FinanceAgent agent;
 
@@ -71,6 +76,10 @@ public class AgentController {
         this.subscriptionService = new SubscriptionService(llm);
         this.goalService = new GoalService(llm);
         this.reportService = new ReportService(llm, categorizationService, budgetService, subscriptionService);
+        this.exportService = new ExportService(budgetService, month -> {
+            MonthlyReport saved = reportService.getReport(month);
+            return saved != null ? saved : generateMonthlyReport(month);
+        });
         this.memory = new ConversationMemory(10);
         this.agent = new FinanceAgent(llm, memory, 6);
         agent.registerTool(new SpendingTool(categorizationService));
@@ -245,6 +254,18 @@ public class AgentController {
 
     public List<MonthlyReport> getReports() {
         return reportService.getReports();
+    }
+
+    // ------------------------------------------------------------ F10 export
+
+    /** Writes a report (monthly, transactions or budget) as pdf, csv or md. Returns the file written. */
+    public Path exportReport(String type, String month, String format, Path path, boolean overwrite)
+            throws ExportFileExistsException, IOException {
+        return exportService.exportReport(type, month, format, path, overwrite);
+    }
+
+    public List<String> getExportFormats() {
+        return exportService.getFormats();
     }
 
     // ------------------------------------------------------------ F07 chat

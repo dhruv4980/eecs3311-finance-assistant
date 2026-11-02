@@ -19,7 +19,9 @@ The Stage 1 design report (PDFs, UML `.uxf` files and diagram PNGs) is in the re
 | F06 Subscription detection + overlap advice | Implemented (CLI) |
 | F07 Chat with the agent (tool use + memory) | Implemented (CLI) |
 | F08 Savings goals | Implemented (CLI) |
-| F09 Monthly report, F10 Report export, GUI | Planned |
+| F09 Monthly report (unusual charges, AI summary) | Implemented (CLI) |
+| F10 Report export (PDF, CSV, Markdown) | Implemented (CLI) |
+| GUI | Planned |
 
 ## Prerequisites
 
@@ -96,11 +98,18 @@ java -jar target/finance-assistant.jar chat                             # back-a
 java -jar target/finance-assistant.jar goals create --name "New laptop" --target 1500 --deadline 2027-04-30
 java -jar target/finance-assistant.jar goals contribute --id <ID> --amount 200
 java -jar target/finance-assistant.jar goals status --id <ID>
+
+# F09: monthly report - totals, change vs last month, budgets, unusual charges, AI summary
+java -jar target/finance-assistant.jar report --month 2026-09
+
+# F10: export a report (types: monthly, transactions, budget; formats: pdf, csv, md)
+java -jar target/finance-assistant.jar export --type monthly --month 2026-09 --format pdf --path reports/
 ```
 
 Error cases to try: `sample-data/notes.txt` (not a CSV), `sample-data/empty.csv` (empty file),
 `sample-data/td-with-errors.csv` (invalid rows and a repeated row), `--bank RBC` (unsupported bank),
-a zero or negative budget amount, a goal with a target of 0, contributing to a completed goal.
+a zero or negative budget amount, a goal with a target of 0, contributing to a completed goal,
+a report for a month with no transactions, exporting to a folder that does not exist or over an existing file.
 
 Use `--db <file>` with any command to work on a separate database (handy for demos).
 
@@ -117,8 +126,10 @@ src/main/java/com/financeassistant/
   budget/          BudgetService (Observer subject), AlertObserver, CliAlertPrinter
   subscription/    SubscriptionService - recurring-charge detection, AI service labels, overlaps
   goal/            GoalService, Goal (State context), GoalState, InProgressState, CompletedState
+  report/          ReportService - monthly figures, unusual-charge detection, AI or template summary
+  export/          ExportService, ReportExporter (Strategy): PdfExporter, CsvExporter, MarkdownExporter
   agent/           FinanceAgent (tool loop), Tool + SpendingTool, TransactionSearchTool, BudgetTool,
-                   SubscriptionTool, GoalTool, ConversationMemory
+                   SubscriptionTool, GoalTool, UnusualTransactionsTool, ConversationMemory
   controller/      AgentController (Facade used by both CLI and GUI)
   cli/             CLI
 src/test/java/     JUnit tests (no network; Claude is replaced by a fake)
@@ -135,6 +146,7 @@ sample-data/       Safe, made-up statements for demos and tests
 | Observer | `budget/BudgetService` + `AlertObserver` | Send alerts to GUI and console without coupling |
 | Facade | `controller/AgentController` | One entry point shared by CLI and GUI |
 | State | `goal/Goal` + `InProgressState` / `CompletedState` | A goal behaves differently once completed |
+| Strategy | `export/ReportExporter` + `PdfExporter` / `CsvExporter` / `MarkdownExporter` | Pick the file format at run time; add formats without touching the export workflow |
 
 ## Security
 

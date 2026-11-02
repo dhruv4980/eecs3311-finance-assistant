@@ -13,6 +13,7 @@ import com.financeassistant.config.Config;
 import com.financeassistant.controller.AgentController;
 import com.financeassistant.controller.ImportOutcome;
 import com.financeassistant.db.DatabaseManager;
+import com.financeassistant.export.ExportFileExistsException;
 import com.financeassistant.goal.Goal;
 import com.financeassistant.goal.GoalProgress;
 import com.financeassistant.importer.ImportException;
@@ -124,6 +125,7 @@ public class CLI {
                 case "subscriptions", "subs" -> subscriptions(args);
                 case "goals", "goal" -> goals(args);
                 case "report" -> report(args);
+                case "export" -> export(args);
                 case "ask" -> ask(String.join(" ", args.positional));
                 case "chat" -> chat(args);
                 default -> {
@@ -425,6 +427,28 @@ public class CLI {
         printReport(controller.generateMonthlyReport(month(args)));
     }
 
+    private void export(Args args) {
+        String type = args.require("type", "monthly|transactions|budget");
+        String month = month(args);
+        String format = args.require("format", String.join("|", controller.getExportFormats()));
+        Path path = Path.of(args.require("path", "report-" + month));
+        Path written;
+        try {
+            try {
+                written = controller.exportReport(type, month, format, path, args.has("overwrite"));
+            } catch (ExportFileExistsException e) {
+                if (!confirm(e.getMessage())) {
+                    out.println("Not exported; the existing file was left alone.");
+                    return;
+                }
+                written = controller.exportReport(type, month, format, path, true);
+            }
+        } catch (ExportFileExistsException | java.io.IOException e) {
+            throw new IllegalArgumentException("Could not write the file: " + e.getMessage());
+        }
+        out.println("Saved " + type + " report for " + month + " to " + written);
+    }
+
     private void printReport(MonthlyReport r) {
         out.println("=".repeat(64));
         out.println("Monthly report - " + r.getMonth());
@@ -521,6 +545,8 @@ public class CLI {
                   goals create --name X --target A --deadline YYYY-MM-DD
                   goals contribute --id N --amount A | goals delete --id N
                   report [--month M] | report list                                        F09 monthly report with AI summary
+                  export --type monthly|transactions|budget --format pdf|csv|md --path FILE [--month M] [--overwrite]
+                                                                                          F10 export a report to a file
                   ask "<question>"                                                        F07 ask the AI agent
                   chat | chat history | chat clear                                        F07 conversation with the agent
                   months                                                                  months that have data
