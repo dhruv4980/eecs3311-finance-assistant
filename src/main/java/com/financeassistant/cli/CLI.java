@@ -16,6 +16,7 @@ import com.financeassistant.db.DatabaseManager;
 import com.financeassistant.export.ExportFileExistsException;
 import com.financeassistant.goal.Goal;
 import com.financeassistant.goal.GoalProgress;
+import com.financeassistant.gui.GUI;
 import com.financeassistant.importer.ImportException;
 import com.financeassistant.importer.ImportResult;
 import com.financeassistant.importer.RejectedRow;
@@ -76,6 +77,10 @@ public class CLI {
         } catch (IllegalStateException e) {
             System.err.println("Error: " + e.getMessage());
             System.exit(1);
+            return;
+        }
+        if (!rest.isEmpty() && rest.get(0).equals("gui")) {
+            GUI.launch(controller); // the window keeps the program running until it is closed
             return;
         }
         BufferedReader stdin = new BufferedReader(new InputStreamReader(System.in, StandardCharsets.UTF_8));
@@ -550,6 +555,7 @@ public class CLI {
                   ask "<question>"                                                        F07 ask the AI agent
                   chat | chat history | chat clear                                        F07 conversation with the agent
                   months                                                                  months that have data
+                  gui                                                                     open the graphical interface
                   help | exit
                 Global option: --db <file>  use a different database file""");
     }
