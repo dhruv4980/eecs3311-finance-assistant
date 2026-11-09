@@ -16,6 +16,7 @@ import com.google.gson.stream.JsonToken;
 import com.google.gson.stream.JsonWriter;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
@@ -183,7 +184,12 @@ public final class DatabaseManager {
         }
     }
 
-    /** Writes to a temp file then renames it, so a crash cannot leave a half-written database. */
+    /**
+     * Writes to a temp file then renames it over the database, so a crash cannot leave a
+     * half-written file. On Windows another program (antivirus, search indexing, OneDrive,
+     * a second copy of the app) can briefly lock the file, so the rename is retried, and as a
+     * last resort the file is written in place rather than losing the user's change.
+     */
     private void flush() {
         if (file == null) {
             return;
@@ -193,16 +199,62 @@ public final class DatabaseManager {
         JsonObject all = new JsonObject();
         tables.forEach(all::add);
         root.add("tables", all);
+        String json = gson.toJson(root);
+        Path tmp = null;
         try {
             Path parent = file.toAbsolutePath().getParent();
             if (parent != null) {
                 Files.createDirectories(parent);
             }
-            Path tmp = file.resolveSibling(file.getFileName() + ".tmp");
-            Files.writeString(tmp, gson.toJson(root), StandardCharsets.UTF_8);
-            Files.move(tmp, file, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+            tmp = file.resolveSibling(file.getFileName() + "." + System.nanoTime() + ".tmp");
+            Files.writeString(tmp, json, StandardCharsets.UTF_8);
+            IOException lastError = null;
+            for (int attempt = 0; attempt < MOVE_ATTEMPTS; attempt++) {
+                try {
+                    moveIntoPlace(tmp);
+                    return;
+                } catch (IOException e) {
+                    lastError = e;
+                    sleep(50L * (attempt + 1));
+                }
+            }
+            // still locked: write directly so the change is not lost
+            try {
+                Files.writeString(file, json, StandardCharsets.UTF_8);
+            } catch (IOException e) {
+                e.addSuppressed(lastError);
+                throw e;
+            }
         } catch (IOException e) {
-            throw new IllegalStateException("Could not save the database to " + file + ": " + e.getMessage(), e);
+            throw new IllegalStateException("Could not save the database to " + file.toAbsolutePath() + " ("
+                    + e.getClass().getSimpleName() + ": " + e.getMessage() + "). Close other copies of the app, "
+                    + "and if the project is in a OneDrive folder, pause syncing or move it.", e);
+        } finally {
+            if (tmp != null) {
+                try {
+                    Files.deleteIfExists(tmp);
+                } catch (IOException ignored) {
+                    // a leftover temp file is harmless
+                }
+            }
+        }
+    }
+
+    private static final int MOVE_ATTEMPTS = 8;
+
+    private void moveIntoPlace(Path tmp) throws IOException {
+        try {
+            Files.move(tmp, file, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+        } catch (AtomicMoveNotSupportedException e) {
+            Files.move(tmp, file, StandardCopyOption.REPLACE_EXISTING);
+        }
+    }
+
+    private static void sleep(long millis) {
+        try {
+            Thread.sleep(millis);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
         }
     }
 
