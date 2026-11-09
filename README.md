@@ -21,7 +21,7 @@ The Stage 1 design report (PDFs, UML `.uxf` files and diagram PNGs) is in the re
 | F08 Savings goals | Implemented (CLI) |
 | F09 Monthly report (unusual charges, AI summary) | Implemented (CLI) |
 | F10 Report export (PDF, CSV, Markdown) | Implemented (CLI) |
-| GUI | Planned |
+| GUI (Swing) for all features | Implemented |
 
 ## Prerequisites
 
@@ -56,6 +56,16 @@ mvn package
 | `DB_PATH` | `data/finance-db.json` | Local database file |
 
 Environment variables with the same names override `.env`.
+
+## Running the GUI
+
+```bash
+java -jar target/finance-assistant.jar gui
+```
+
+The window has one tab per feature area: Import, Transactions (double-click a row to change its
+category), Budgets, Subscriptions, Goals, Reports (generate + export) and Chat. Budget alerts appear
+at the bottom of the window from any tab. AI calls run in the background, so the window stays usable.
 
 ## Running the CLI
 
@@ -132,6 +142,7 @@ src/main/java/com/financeassistant/
                    SubscriptionTool, GoalTool, UnusualTransactionsTool, ConversationMemory
   controller/      AgentController (Facade used by both CLI and GUI)
   cli/             CLI
+  gui/             GUI (main window), one panel per tab, GuiAlertPanel (Observer)
 src/test/java/     JUnit tests (no network; Claude is replaced by a fake)
 sample-data/       Safe, made-up statements for demos and tests
 ```

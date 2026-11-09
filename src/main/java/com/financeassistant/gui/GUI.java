@@ -26,6 +26,8 @@ public class GUI extends JFrame {
     private final BudgetPanel budgetPanel;
     private final SubscriptionsPanel subscriptionsPanel;
     private final GoalsPanel goalsPanel;
+    private final ChatPanel chatPanel;
+    private final ReportsPanel reportsPanel;
     private final GuiAlertPanel alertPanel = new GuiAlertPanel();
 
     public GUI(AgentController controller) {
@@ -39,12 +41,16 @@ public class GUI extends JFrame {
         budgetPanel = new BudgetPanel(controller);
         subscriptionsPanel = new SubscriptionsPanel(controller);
         goalsPanel = new GoalsPanel(controller);
+        chatPanel = new ChatPanel(controller);
+        reportsPanel = new ReportsPanel(controller);
         controller.addAlertObserver(alertPanel); // Observer: budget alerts appear here from any tab
         tabs.addTab("Import", importPanel);
         tabs.addTab("Transactions", transactionsPanel);
         tabs.addTab("Budgets", budgetPanel);
         tabs.addTab("Subscriptions", subscriptionsPanel);
         tabs.addTab("Goals", goalsPanel);
+        tabs.addTab("Reports", reportsPanel);
+        tabs.addTab("Chat", chatPanel);
         tabs.addChangeListener(e -> refreshSelected());
 
         JLabel ai = new JLabel("AI: " + controller.describeAi());
@@ -85,6 +91,14 @@ public class GUI extends JFrame {
 
     public void showGoalsTab() {
         tabs.setSelectedComponent(goalsPanel);
+    }
+
+    public void showReportsTab() {
+        tabs.setSelectedComponent(reportsPanel);
+    }
+
+    public void showChatPanel() {
+        tabs.setSelectedComponent(chatPanel);
     }
 
     SubscriptionsPanel getSubscriptionsPanel() {
