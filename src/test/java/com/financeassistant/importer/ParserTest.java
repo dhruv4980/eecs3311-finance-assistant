@@ -45,9 +45,22 @@ public class ParserTest {
     }
 
     @Test
+    public void tdReadsCurrentQuotedExportFormat() throws Exception {
+        // layout of a real TD account-activity export: ISO dates, every field quoted
+        ParseResult result = new TDParser().parse(csv(
+                "\"2026-06-10\",\"CANADA           PRO\",,\"30.99\",\"4405.26\"\n"
+                + "\"2026-06-12\",\"SEND E-TFR ***MQj\",\"500\",,\"5323.82\"\n"));
+        assertEquals(0, result.rejected().size());
+        assertEquals(LocalDate.of(2026, 6, 10), result.transactions().get(0).getDate());
+        assertEquals(30.99, result.transactions().get(0).getAmount(), 0.001);
+        assertEquals(-500.0, result.transactions().get(1).getAmount(), 0.001);
+        assertEquals("CANADA           PRO", result.transactions().get(0).getDescription());
+    }
+
+    @Test
     public void cibcHandlesQuotedCommasAndHeader() throws Exception {
         ParseResult result = new CIBCParser().parse(csv(
-                "Date,Description,Debit,Credit,Card\n2026-08-09,\"PIZZA NOVA, LOCATION 52\",27.40,,4505\n"));
+                "Date,Description,Debit,Credit,Card\n2026-08-09,\"PIZZA NOVA, LOCATION 52\",27.40,,4505********1234\n"));
         assertEquals(1, result.transactions().size());
         assertEquals("PIZZA NOVA, LOCATION 52", result.transactions().get(0).getDescription());
         assertEquals(-27.40, result.transactions().get(0).getAmount(), 0.001);

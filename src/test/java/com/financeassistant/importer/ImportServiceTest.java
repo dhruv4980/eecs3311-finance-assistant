@@ -118,6 +118,14 @@ public class ImportServiceTest {
             assertTrue(e.getMessage(), e.getMessage().contains("Did you mean to choose CIBC"));
         }
         assertEquals(2, service.previewImport(cibcFile, "CIBC", "Visa").getValidRows().size());
+        // and the other way round: a TD export chosen as CIBC
+        File tdFile = csv("\"2026-06-10\",\"CANADA           PRO\",,\"30.99\",\"4405.26\"\n");
+        try {
+            service.previewImport(tdFile, "CIBC", "Chequing");
+            fail("expected a wrong-bank hint");
+        } catch (ImportException e) {
+            assertTrue(e.getMessage(), e.getMessage().contains("Did you mean to choose TD"));
+        }
         // a file no bank can read still gets the normal per-row errors
         ImportResult junk = service.previewImport(csv("not,a,real,row\n13/45/2026,X,1,,1\n"), "TD", "Visa");
         assertEquals(0, junk.getValidRows().size());
