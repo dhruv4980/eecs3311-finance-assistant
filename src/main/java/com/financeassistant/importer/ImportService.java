@@ -42,6 +42,13 @@ public class ImportService {
         if (parsed.rows().isEmpty() && parsed.rejected().isEmpty()) {
             throw new ImportException("The file " + file.getName() + " has no transactions in it.");
         }
+        if (parsed.rows().isEmpty()) {
+            String better = bankThatReads(file, parser.getBankName());
+            if (better != null) {
+                throw new ImportException("None of the rows match the " + parser.getBankName()
+                        + " statement layout, but they match " + better + ". Did you mean to choose " + better + " as the bank?");
+            }
+        }
 
         int accountId = findAccount(parser.getBankName(), accountType).map(Account::getId).orElse(0);
         List<RejectedRow> rejected = new ArrayList<>(parsed.rejected());
@@ -131,6 +138,24 @@ public class ImportService {
         Map<String, Integer> counts = new HashMap<>();
         rows.forEach(t -> counts.merge(t.duplicateKey(), 1, Integer::sum));
         return rows.stream().filter(t -> counts.get(t.duplicateKey()) > 1).toList();
+    }
+
+    /** Another supported bank whose parser reads every row of the file, or null. Used to explain a wrong bank choice. */
+    private String bankThatReads(File file, String chosenBank) {
+        for (String bank : parserFactory.supportedBanks()) {
+            if (bank.equalsIgnoreCase(chosenBank)) {
+                continue;
+            }
+            try {
+                ParseResult attempt = parserFactory.createParser(bank).parse(file);
+                if (!attempt.rows().isEmpty() && attempt.rejected().isEmpty()) {
+                    return bank;
+                }
+            } catch (ImportException e) {
+                // this bank cannot read it either
+            }
+        }
+        return null;
     }
 
     public List<String> supportedBanks() {

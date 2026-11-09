@@ -108,6 +108,22 @@ public class ImportServiceTest {
     }
 
     @Test
+    public void wrongBankChoiceSuggestsTheRightOne() throws Exception {
+        File cibcFile = csv("2026-10-30,\"PIZZA PIZZA # 047 ETOBICOKE, ON\",10.45,,5268********1485\n"
+                + "2026-10-29,\"UBER CANADA/UBEREATS TORONTO, ON\",21.85,,5268********1485\n");
+        try {
+            service.previewImport(cibcFile, "TD", "Visa");
+            fail("expected a wrong-bank hint");
+        } catch (ImportException e) {
+            assertTrue(e.getMessage(), e.getMessage().contains("Did you mean to choose CIBC"));
+        }
+        assertEquals(2, service.previewImport(cibcFile, "CIBC", "Visa").getValidRows().size());
+        // a file no bank can read still gets the normal per-row errors
+        ImportResult junk = service.previewImport(csv("not,a,real,row\n13/45/2026,X,1,,1\n"), "TD", "Visa");
+        assertEquals(0, junk.getValidRows().size());
+    }
+
+    @Test
     public void unsupportedBankIsAnImportError() throws Exception {
         try {
             service.previewImport(csv("09/14/2026,A,1.00,,1\n"), "RBC", "Chequing");
