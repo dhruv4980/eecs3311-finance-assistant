@@ -6,21 +6,22 @@ explains your finances in plain language. Deterministic code does every calculat
 decides what to look up and how to explain it.
 
 The Stage 1 design report (PDFs, UML `.uxf` files and diagram PNGs) is in the repository root.
+The Stage 2 report is `stage2-report.pdf`, and the updated Stage 2 class diagrams (UMLet) are in `docs/uml/`.
 
 ## Status
 
 | Feature | Status |
 |---|---|
-| F01 Import CSV statements (TD, CIBC) | Implemented (CLI) |
-| F02 Automatic categorization (rules + Claude) | Implemented (CLI) |
-| F03 Manual category correction + rules | Implemented (CLI) |
-| F04 Monthly budgets | Implemented (CLI) |
-| F05 Budget alerts (80% / exceeded) | Implemented (CLI) |
-| F06 Subscription detection + overlap advice | Implemented (CLI) |
-| F07 Chat with the agent (tool use + memory) | Implemented (CLI) |
-| F08 Savings goals | Implemented (CLI) |
-| F09 Monthly report (unusual charges, AI summary) | Implemented (CLI) |
-| F10 Report export (PDF, CSV, Markdown) | Implemented (CLI) |
+| F01 Import CSV statements (TD, CIBC) | Implemented (GUI + CLI) |
+| F02 Automatic categorization (rules + Claude) | Implemented (GUI + CLI) |
+| F03 Manual category correction + rules | Implemented (GUI + CLI) |
+| F04 Monthly budgets | Implemented (GUI + CLI) |
+| F05 Budget alerts (80% / exceeded) | Implemented (GUI + CLI) |
+| F06 Subscription detection + overlap advice | Implemented (GUI + CLI) |
+| F07 Chat with the agent (tool use + memory) | Implemented (GUI + CLI) |
+| F08 Savings goals | Implemented (GUI + CLI) |
+| F09 Monthly report (unusual charges, AI summary) | Implemented (GUI + CLI) |
+| F10 Report export (PDF, CSV, Markdown) | Implemented (GUI + CLI) |
 | GUI (Swing) for all features | Implemented |
 
 ## Prerequisites
@@ -116,6 +117,10 @@ java -jar target/finance-assistant.jar report --month 2026-09
 java -jar target/finance-assistant.jar export --type monthly --month 2026-09 --format pdf --path reports/
 ```
 
+Demo files used in the videos: `sample-data/cibc-demo-subscriptions.csv` (CIBC, known subscriptions,
+a Netflix price increase and overlapping music services) and `sample-data/td-demo-income.csv`
+(TD, Jul-Oct 2026 with paycheques and one unusual Best Buy charge in October).
+
 Error cases to try: `sample-data/notes.txt` (not a CSV), `sample-data/empty.csv` (empty file),
 `sample-data/td-with-errors.csv` (invalid rows and a repeated row), `--bank RBC` (unsupported bank),
 a zero or negative budget amount, a goal with a target of 0, contributing to a completed goal,
@@ -147,7 +152,7 @@ src/test/java/     JUnit tests (no network; Claude is replaced by a fake)
 sample-data/       Safe, made-up statements for demos and tests
 ```
 
-## Design patterns implemented so far
+## Design patterns
 
 | Pattern | Where | Problem solved |
 |---|---|---|
