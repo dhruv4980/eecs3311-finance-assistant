@@ -1,12 +1,14 @@
 # AI Personal Finance Assistant (EECS 3311)
 
+**Stage 2 report:** [stage2-report.pdf](stage2-report.pdf) · **Stage 2 class diagrams:** [docs/uml](docs/uml)
+
 A desktop finance assistant that imports bank/credit-card statements, categorizes spending
 (your own rules first, then Claude for the rest), tracks monthly budgets with alerts, and
 explains your finances in plain language. Deterministic code does every calculation; the LLM
 decides what to look up and how to explain it.
 
 The Stage 1 design report (PDFs, UML `.uxf` files and diagram PNGs) is in the repository root.
-The Stage 2 report is `stage2-report.pdf`, and the updated Stage 2 class diagrams (UMLet) are in `docs/uml/`.
+The Stage 2 report is `stage2-report.pdf`, and the updated Stage 2 class diagrams (UMLet `.uxf` and PNG) are in `docs/uml/`.
 
 ## Status
 
