@@ -1,6 +1,6 @@
 # AI Personal Finance Assistant (EECS 3311)
 
-**Stage 2 report:** [stage2-report.pdf](stage2-report.pdf) · **Stage 2 class diagrams:** [docs/uml](docs/uml)
+**Stage 2 report:** [stage2-report.pdf](https://github.com/dhruv4980/eecs3311-finance-assistant/blob/main/stage2-report.pdf) · **Stage 2 class diagrams:** [docs/uml](https://github.com/dhruv4980/eecs3311-finance-assistant/tree/main/docs/uml)
 
 A desktop finance assistant that imports bank/credit-card statements, categorizes spending
 (your own rules first, then Claude for the rest), tracks monthly budgets with alerts, and
